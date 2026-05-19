@@ -1,6 +1,18 @@
 # arcgis-baidu-amap-geocode
 
-集成百度地图与高德地图 Web 服务 API 的 ArcGIS Pro Python 工具箱，提供面向中国坐标系的地理编码、POI 检索、逆地理编码、行政区划边界导出和坐标系转换功能。
+[English](README_EN.md) | 中文
+
+集成百度地图与高德地图 Web 服务 API 的 **ArcGIS Pro** Python 工具箱（`.pyt`），提供面向中国坐标系的地理编码、POI 检索、逆地理编码、行政区划边界导出和坐标系转换功能。
+
+## 环境要求
+
+| 项目 | 要求 |
+|------|------|
+| **软件** | ArcGIS Pro **3.0 及以上**（不支持 ArcMap / ArcGIS 10.x） |
+| **Python** | 随 ArcGIS Pro 自带（3.x），无需额外安装 |
+| **API Key** | 百度地图 Key 和/或高德地图 Key（**必须自行申请并填写**，工具箱无内置 Key） |
+
+> 本工具箱基于 ArcGIS Pro 3.x 的 Python 3 环境开发，在 ArcMap 或 ArcGIS Desktop 10.x 下无法运行。
 
 ## 功能概览
 
@@ -13,30 +25,51 @@
 | **E_逆地理编码_坐标信息转最近点信息** | 输入点坐标，输出附近 POI 列表（长表格式，每 POI 一行） |
 | **F_坐标系转换** | WGS84 / GCJ02(国测局) / BD09(百度) / CGCS2000 之间的批量坐标转换 |
 
-## 环境要求
-
-- ArcGIS Pro 3.x
-- Python 3.x（随 ArcGIS Pro 安装）
-- 百度地图 API Key 和/或 高德地图 API Key
-
 ## 安装
 
 1. 克隆或下载本仓库到本地目录
 2. 在 ArcGIS Pro 中，打开 **目录** 窗格 → **工具箱** → 右键 → **添加工具箱**，选择 `百度高德Geocode.pyt`
-3. 配置 API Key（见下方密钥配置）
+3. **首次使用前必须配置 API Key**（见下方）
 
-## 密钥配置
+## 密钥配置（首次使用必读）
 
-工具需要百度地图和/或高德地图的 API Key。配置步骤详见 [配置指南](CONFIG.md)。
+工具箱不包含任何 API Key，**必须自行申请并填写后才能使用**。详细配置指南见 [CONFIG.md](CONFIG.md)。
 
-**快速配置：**
+### 填写步骤
 
-1. 申请 Key
-   - 百度：https://lbsyun.baidu.com/apiconsole/key
-   - 高德：https://console.amap.com/dev/key/app
-2. 用记事本打开 `config/baidu_keys.txt` 和 `config/amap_keys.txt`
-3. 删除 Key 所在行首的 `#` 号，把示例 Key 替换成你的真实 Key
-4. 每行一个 Key，可配置多个 Key 提高并发和避免配额限制
+1. **申请 Key**
+   - 百度：https://lbsyun.baidu.com/apiconsole/key → 创建「服务端」类型应用
+   - 高德：https://console.amap.com/dev/key/app → 创建「Web服务」类型应用
+
+2. **找到配置文件** — 在工具箱目录下的 `config/` 文件夹中：
+   ```
+   arcgis-baidu-amap-geocode/
+   └── config/
+       ├── baidu_keys.txt    ← 百度 Key 填这里
+       └── amap_keys.txt     ← 高德 Key 填这里
+   ```
+
+3. **用记事本打开** `baidu_keys.txt` 或 `amap_keys.txt`，内容如下：
+   ```
+   # 百度地图 API Key 配置文件
+   # ……
+   # 使用方法：
+   #   删除下面行首的 # 号，把 your_baidu_key 替换成你的真实 Key
+   #   每行一个 Key，可配多个提高速度
+   #
+   #your_baidu_key_here
+   ```
+
+4. **删除 `#` 号，替换为真实 Key**，例如：
+   ```
+   AbCdEf1234567890GhIjKlMnOpQrStUv
+   ```
+   - 每行一个 Key，以 `#` 开头的行为注释
+   - 可配置多个 Key 提高并发速度和避免单 Key 配额不足
+
+5. 保存文件，重新运行工具即可
+
+> **按需配置**：只用高德工具只需填 `amap_keys.txt`，只用百度工具只需填 `baidu_keys.txt`。
 
 ## 坐标系说明
 

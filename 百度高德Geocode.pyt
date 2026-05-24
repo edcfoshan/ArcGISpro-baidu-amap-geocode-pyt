@@ -57,6 +57,9 @@ def _reload_core_modules():
     coord_transform_tool = _safe_reload(coord_transform_tool)
     admin_area_tool = _safe_reload(admin_area_tool)
 
+    version = getattr(common, '__version__', '未知')
+    arcpy.AddMessage('核心模块已加载，版本：{}'.format(version))
+
 
 _reload_core_modules()
 

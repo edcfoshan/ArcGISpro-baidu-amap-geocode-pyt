@@ -1487,7 +1487,7 @@ def search_amap_poi_polygon_detailed(extent, keywords=None, types=None, max_poi_
         density_capacity_hit = density_total >= AMAP_POI_PAGE_SIZE_LIMIT * split_trigger_pages
         top_out_signal = pages_hit or raw_capacity_hit or density_capacity_hit
         density_enough = density_total >= split_min_results or raw_total >= split_min_results
-        should_split = can_split and top_out_signal and density_enough
+        should_split = can_split and top_out_signal and density_enough and added_count > 0
 
         if should_split:
             if stage_name == '首轮':
@@ -1581,7 +1581,7 @@ def search_amap_poi_polygon_detailed(extent, keywords=None, types=None, max_poi_
                 'query_failed': False
             }
 
-        if top_out_signal:
+        if top_out_signal and added_count > 0:
             reason_code = reason_code or 'split_limit'
             _append_unfinished(unfinished_bucket, current_extent, path, reason_code)
             return {

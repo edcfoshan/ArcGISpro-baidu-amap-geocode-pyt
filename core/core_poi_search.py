@@ -1410,6 +1410,20 @@ def search_amap_poi_polygon_detailed(extent, keywords=None, types=None, max_poi_
     overall_reason = ''
     primary_query_failed = False
 
+    def _rect_area(ext):
+        return abs(ext.XMax - ext.XMin) * abs(ext.YMax - ext.YMin)
+
+    total_area = _rect_area(extent)
+    completed_area = [0.0]
+
+    arcpy.SetProgressor('step', '高德POI采集（首轮）', 0, 1000, 1)
+
+    def _update_progress(label_prefix='高德POI采集'):
+        pct = min(99.9, completed_area[0] / total_area * 100.0) if total_area > 0 else 0.0
+        arcpy.SetProgressorPosition(int(pct * 10))
+        arcpy.SetProgressorLabel('{}：已搜索 {:.1f}% 区域，累计 {} 条'.format(
+            label_prefix, pct, len(all_pois)))
+
     def _append_unfinished(target_bucket, current_extent, path, reason_code):
         target_bucket.append(
             _build_unfinished_rect_record(current_extent, path, reason_code, output_wgs84)
@@ -1445,6 +1459,8 @@ def search_amap_poi_polygon_detailed(extent, keywords=None, types=None, max_poi_
 
         if len(all_pois) >= max_poi_count:
             all_pois[:] = all_pois[:max_poi_count]
+            completed_area[0] += _rect_area(current_extent)
+            _update_progress()
             return {
                 'terminated_early': False,
                 'stop_all': False,
@@ -1455,6 +1471,8 @@ def search_amap_poi_polygon_detailed(extent, keywords=None, types=None, max_poi_
 
         if stop_all:
             _append_unfinished(unfinished_bucket, current_extent, path, 'key_pool_exhausted')
+            completed_area[0] += _rect_area(current_extent)
+            _update_progress()
             return {
                 'terminated_early': True,
                 'stop_all': True,
@@ -1470,6 +1488,8 @@ def search_amap_poi_polygon_detailed(extent, keywords=None, types=None, max_poi_
                 path,
                 reason_code or 'request_failed'
             )
+            completed_area[0] += _rect_area(current_extent)
+            _update_progress()
             return {
                 'terminated_early': True,
                 'stop_all': False,
@@ -1584,6 +1604,8 @@ def search_amap_poi_polygon_detailed(extent, keywords=None, types=None, max_poi_
         if top_out_signal and added_count > 0:
             reason_code = reason_code or 'split_limit'
             _append_unfinished(unfinished_bucket, current_extent, path, reason_code)
+            completed_area[0] += _rect_area(current_extent)
+            _update_progress()
             return {
                 'terminated_early': True,
                 'stop_all': False,
@@ -1595,6 +1617,8 @@ def search_amap_poi_polygon_detailed(extent, keywords=None, types=None, max_poi_
                 'query_failed': False
             }
 
+        completed_area[0] += _rect_area(current_extent)
+        _update_progress()
         return {
             'terminated_early': False,
             'stop_all': False,
@@ -1650,6 +1674,9 @@ def search_amap_poi_polygon_detailed(extent, keywords=None, types=None, max_poi_
                 )
             )
 
+            arcpy.SetProgressorLabel('高德POI采集（回灌第{}轮）：累计 {} 条'.format(
+                round_index, len(all_pois)))
+
             for rect_index, rect in enumerate(current_round_rectangles):
                 if len(all_pois) >= max_poi_count:
                     break
@@ -1698,6 +1725,7 @@ def search_amap_poi_polygon_detailed(extent, keywords=None, types=None, max_poi_
 
             current_round_rectangles = final_unfinished_rectangles
 
+    arcpy.ResetProgressor()
     return {
         'pois': all_pois,
         'unfinished_rectangles': final_unfinished_rectangles,

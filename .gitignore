@@ -1,7 +1,10 @@
-# API 密钥文件（模板已入库，本地修改后请执行以下命令防止误提交：
+# API 密钥文件
+# 这两个文件以「模板」形式入库（仅含注释和占位符），本地填入真实 Key 后，
+# 请执行以下命令让 git 忽略本地修改（已跟踪文件 .gitignore 无法阻止，必须用 skip-worktree）：
 #   git update-index --skip-worktree config/baidu_keys.txt
 #   git update-index --skip-worktree config/amap_keys.txt
-# ）
+# 下方规则用于新环境/未跟踪场景的双保险
+config/*_keys.txt
 
 # Python 编译缓存
 __pycache__/

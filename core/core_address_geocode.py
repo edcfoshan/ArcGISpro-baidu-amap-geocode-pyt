@@ -7,6 +7,7 @@
 import requests
 import arcpy
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from . import core_common as common
@@ -118,14 +119,20 @@ def geocode_baidu_full(address, city=None, key=None, max_retries=None):
         if use_key_pool:
             key_index, current_key = common.get_next_baidu_key_info()
             if current_key is None:
-                return _make_failure(
-                    'KEY_POOL_EMPTY',
-                    '当前没有可用的百度 Key',
-                    None,
-                    'key_pool_exhausted',
-                    '当前没有可用的百度 Key',
-                    retry
-                )
+                # 池空时短暂等待最近一把 Key 解冻，避免短时限流雪崩成整批失败
+                wait_seconds = common.get_baidu_key_wait_seconds()
+                if wait_seconds is not None and wait_seconds <= 10:
+                    time.sleep(wait_seconds + 0.3)
+                    key_index, current_key = common.get_next_baidu_key_info()
+                if current_key is None:
+                    return _make_failure(
+                        'KEY_POOL_EMPTY',
+                        '当前没有可用的百度 Key',
+                        None,
+                        'key_pool_exhausted',
+                        '当前没有可用的百度 Key',
+                        retry
+                    )
             if current_key in tried_keys:
                 continue
         else:
@@ -270,32 +277,104 @@ def geocode_baidu_full(address, city=None, key=None, max_retries=None):
     )
 
 
-def geocode_amap_full(address, city=None, key=None):
+def geocode_amap_full(address, city=None, key=None, max_retries=None):
     """
-    高德地理编码函数
+    高德地理编码函数，支持自动换 Key 重试。
 
     参数：
     - address: 地址
     - city: 城市名（可选）
     - key: 高德key（可选，如果不提供则自动获取）
+    - max_retries: 最大重试次数（默认为key数量）
 
     返回：
     - 包含地理编码结果的字典
     """
-    if key is None:
-        key = common._get_next_amap_key()
-    params = {'address': address, 'key': key, 'output': 'json'}
-    if city:
-        params['city'] = city
-    try:
-        resp = requests.get(common.AMAP_GEO_URL, params=params, timeout=30)
-        resp.raise_for_status()
-        result = resp.json()
+    if max_retries is None:
+        max_retries = min(len(common.AMAP_KEYS), 5)
+    use_key_pool = key is None
+    if not use_key_pool:
+        max_retries = max(1, max_retries)
+
+    tried_keys = set()
+    prefix_used = False
+    last_failure = None
+
+    def _make_failure(status, info, infocode, current_key, kind, reason, retry_count):
+        return {
+            'ok': False,
+            'status': str(status) if status is not None else '',
+            'info': info or '',
+            'infocode': str(infocode) if infocode is not None else '',
+            'key': common.mask_key(current_key) if current_key else 'N/A',
+            'count': '0',
+            'address': None,
+            'lng_gcj': None,
+            'lat_gcj': None,
+            'level': None,
+            'need_check': '是',
+            'reason': reason or '高德地理编码失败',
+            'error_kind': kind or 'unknown',
+            'retry_count': retry_count
+        }
+
+    for retry in range(max_retries):
+        if use_key_pool:
+            key_index, current_key = common.get_next_amap_key_info()
+            if current_key is None:
+                # 池空时短暂等待最近一把 Key 解冻，避免短时限流雪崩
+                wait_seconds = common.get_amap_key_wait_seconds()
+                if wait_seconds is not None and wait_seconds <= 10:
+                    time.sleep(wait_seconds + 0.3)
+                    key_index, current_key = common.get_next_amap_key_info()
+                if current_key is None:
+                    return _make_failure(
+                        'KEY_POOL_EMPTY', '当前没有可用的高德 Key', None, None,
+                        'key_pool_exhausted', '当前没有可用的高德 Key', retry
+                    )
+            if current_key in tried_keys:
+                continue
+        else:
+            current_key = key
+            key_index = common.AMAP_KEYS.index(current_key) if current_key in common.AMAP_KEYS else None
+
+        tried_keys.add(current_key)
+
+        # 首次用原地址；遇到 30001 后补全 city 前缀重试（地址上下文不足时引擎会返回 30001）
+        request_address = (city + address) if prefix_used and city else address
+        params = {'address': request_address, 'key': current_key, 'output': 'json'}
+        if city:
+            params['city'] = city
+
+        try:
+            resp = requests.get(common.AMAP_GEO_URL, params=params, timeout=30)
+            resp.raise_for_status()
+            result = resp.json()
+        except Exception as exc:
+            classification = common.classify_amap_response_issue(info=str(exc))
+            if key_index is not None and classification.get('switch_key'):
+                try:
+                    common._set_amap_key_delay(key_index, classification.get('delay_seconds', 1))
+                except Exception:
+                    pass
+                arcpy.AddWarning("高德 Key {} 触发{}，已切换下一个 Key".format(
+                    common.mask_key(current_key), classification.get('kind')))
+            failure = _make_failure(
+                'ERROR', str(exc), 'ERROR', current_key,
+                classification.get('kind', 'request_error'),
+                classification.get('message') or '高德地理编码请求异常：{}'.format(str(exc)),
+                retry + 1
+            )
+            last_failure = failure
+            if classification.get('switch_key') and use_key_pool and retry < max_retries - 1:
+                continue
+            return failure
+
         status = result.get('status', '0')
         info = result.get('info', 'unknown')
         infocode = result.get('infocode', '')
 
-        if status == '1' and infocode == '10000':
+        if str(status) == '1' and str(infocode) == '10000':
             geocodes = result.get('geocodes', [])
             count = len(geocodes)
             if count > 0:
@@ -312,60 +391,56 @@ def geocode_amap_full(address, city=None, key=None):
                     'status': status,
                     'info': info,
                     'infocode': infocode,
-                    'key': common.mask_key(key),
+                    'key': common.mask_key(current_key),
                     'count': str(count),
                     'address': address_matched,
                     'lng_gcj': lng_gcj,
                     'lat_gcj': lat_gcj,
                     'level': level,
                     'need_check': need_check,
-                    'reason': reason
+                    'reason': reason,
+                    'error_kind': 'ok',
+                    'retry_count': retry + 1
                 }
             else:
-                return {
-                    'ok': False,
-                    'status': status,
-                    'info': info,
-                    'infocode': infocode,
-                    'key': common.mask_key(key),
-                    'count': '0',
-                    'address': None,
-                    'lng_gcj': None,
-                    'lat_gcj': None,
-                    'level': None,
-                    'need_check': '是',
-                    'reason': '高德未找到匹配结果'
-                }
-        else:
-            return {
-                'ok': False,
-                'status': status,
-                'info': info,
-                'infocode': infocode,
-                'key': common.mask_key(key),
-                'count': '0',
-                'address': None,
-                'lng_gcj': None,
-                'lat_gcj': None,
-                'level': None,
-                'need_check': '是',
-                'reason': '高德 API 返回错误：{} ({})'.format(info, infocode)
-            }
-    except Exception as e:
-        return {
-            'ok': False,
-            'status': 'ERROR',
-            'info': str(e),
-            'infocode': 'ERROR',
-            'key': common.mask_key(key),
-            'count': '0',
-            'address': None,
-            'lng_gcj': None,
-            'lat_gcj': None,
-            'level': None,
-            'need_check': '是',
-            'reason': '高德地理编码异常：{}'.format(str(e))
-        }
+                return _make_failure(
+                    status, info, infocode, current_key,
+                    'not_found', '高德未找到匹配结果', retry + 1
+                )
+
+        classification = common.classify_amap_response_issue(status=status, info=info, infocode=infocode)
+        failure = _make_failure(
+            status, info, infocode, current_key,
+            classification.get('kind', 'api_error'),
+            classification.get('message') or '高德 API 返回错误：{} ({})'.format(info, infocode),
+            retry + 1
+        )
+        last_failure = failure
+
+        # 30001 地址上下文不足：补全 city 前缀后重试（换 Key 无效，主因是地址缺行政区划）
+        if classification.get('kind') == 'address_context' and not prefix_used and city:
+            prefix_used = True
+            arcpy.AddMessage("高德对地址 [{}] 返回 30001，已补全前缀 [{}] 重试".format(address, city))
+            if use_key_pool and retry < max_retries - 1:
+                continue
+
+        if classification.get('switch_key'):
+            if key_index is not None:
+                try:
+                    common._set_amap_key_delay(key_index, classification.get('delay_seconds', 1))
+                except Exception:
+                    pass
+                arcpy.AddWarning("高德 Key {} 触发{}，已切换下一个 Key".format(
+                    common.mask_key(current_key), classification.get('kind')))
+            if use_key_pool and retry < max_retries - 1:
+                continue
+
+        return failure
+
+    return last_failure or _make_failure(
+        'RETRY_EXHAUSTED', '所有 Key 重试失败', None, None,
+        'retry_exhausted', '所有 Key 重试失败', max_retries
+    )
 
 
 def geocode_address_both_platforms(address, city=None):
@@ -823,6 +898,10 @@ def run_address_geocode(in_table, address_field, city_field=None, output_wgs84=T
         max_workers = common.calculate_max_workers(
             speed_level, len(common.BAIDU_KEYS), len(common.AMAP_KEYS)
         )
+
+    # 百度个人免费版 Key 并发能力弱，固定低并发避免触发账号级限流导致 Key 池雪崩
+    if platform == 'baidu':
+        max_workers = min(max_workers, 2)
 
     arcpy.AddMessage('速度档位：{}，最大并发线程数：{}'.format(speed_level, max_workers))
 

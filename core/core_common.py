@@ -4,7 +4,7 @@
 
 此模块被 core_address_geocode.py 和 core_poi_search.py 共享使用
 """
-__version__ = '1.3'
+__version__ = '1.4'
 import math
 import os
 import threading
@@ -209,6 +209,27 @@ def get_baidu_key_wait_seconds():
         wait_seconds = None
         for key_index in range(len(BAIDU_KEYS)):
             delay_until = _baidu_key_delay.get(key_index)
+            if delay_until is None:
+                return 0
+            remaining = delay_until - current_time
+            if remaining <= 0:
+                return 0
+            if wait_seconds is None or remaining < wait_seconds:
+                wait_seconds = remaining
+
+        return wait_seconds
+
+
+def get_amap_key_wait_seconds():
+    """返回高德 Key 还要等待的最短秒数；若已有可用 Key 则返回 0。"""
+    with _key_lock:
+        if not AMAP_KEYS:
+            return None
+
+        current_time = time.time()
+        wait_seconds = None
+        for key_index in range(len(AMAP_KEYS)):
+            delay_until = _amap_key_delay.get(key_index)
             if delay_until is None:
                 return 0
             remaining = delay_until - current_time
@@ -487,6 +508,27 @@ def classify_amap_response_issue(status=None, info=None, infocode=None):
             'switch_key': False,
             'delay_seconds': 0,
             'message': ''
+        }
+
+    # 30001 引擎数据错误：多为地址缺少行政区划上下文，换 Key 无效，
+    # 应补全 city 前缀后重试（由 geocode_amap_full 处理）
+    address_context_hints = ('engine_response_data_error', '30001')
+    if any(hint in text for hint in address_context_hints):
+        return {
+            'kind': 'address_context',
+            'switch_key': True,
+            'delay_seconds': 0,
+            'message': '高德引擎数据错误，将补全行政区划前缀重试'
+        }
+
+    # 并发/QPS 限流（CUQPS 10021）：换 Key 短延迟即可恢复
+    concurrency_hints = ('cuqps', 'exceeded the limit', '10021')
+    if any(hint in text for hint in concurrency_hints):
+        return {
+            'kind': 'concurrency',
+            'switch_key': True,
+            'delay_seconds': 2,
+            'message': '高德并发/QPS 限流，已切换 Key 重试'
         }
 
     quota_hints = (

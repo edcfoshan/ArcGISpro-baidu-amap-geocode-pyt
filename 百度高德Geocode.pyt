@@ -28,7 +28,14 @@ _AMAP_POI_CATEGORY_CACHE = None
 
 
 def _reload_core_modules():
-    """强制刷新 core 包里的模块，避免 ArcGIS 重复用旧缓存。"""
+    """强制刷新 core 包里的模块，避免 ArcGIS 重复用旧缓存。
+
+    注意：热重载在 Pro 的 GP 后台进程（RuntimeLocalServer）里偶发死锁，
+    表现为工具点"运行"后一直转圈、消息为空、无产出。默认关闭；开发调试
+    时设置环境变量 GEOCODE_HOT_RELOAD=1 即可重新启用。
+    """
+    if os.environ.get('GEOCODE_HOT_RELOAD', '0') != '1':
+        return
     global common, address_geocode, reverse_geocode, poi_search, coord_transform_tool
     global admin_area_tool
     importlib.invalidate_caches()

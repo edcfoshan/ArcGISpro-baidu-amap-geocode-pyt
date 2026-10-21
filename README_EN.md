@@ -25,6 +25,10 @@ An **ArcGIS Pro** Python toolbox (`.pyt`) integrating Baidu Maps and Amap (Gaode
 | **E_Reverse Geocoding_Point to POI** | Input point coordinates, output nearby POI list (long table format, one row per POI) |
 | **F_Coordinate Transform** | Batch conversion between WGS84 / GCJ02 / BD09 / CGCS2000 |
 
+## Sponsor
+
+Thanks to **jizhanai.top** for sponsoring this project! [Register through the invitation link](https://jizhanai.top/register?ref=PBUXGDHTFUAS) and enter invitation code **`PBUXGDHTFUAS`** to receive **CNY 5 off**.
+
 ## Installation
 
 1. Clone or download this repository to a local directory
@@ -111,11 +115,15 @@ The number of concurrent threads is automatically calculated based on the number
 - Baidu POI Search 3.0 API **requires** a keyword (query); empty-keyword full search is not supported
 - For output GDB, use File Geodatabase (directory ending with .gdb) or check "Use temporary workspace"
 
-## Support the Author
+## Follow & Support
 
-If you find this toolbox helpful, your support is appreciated!
+Scan to follow Jisig G Studio on WeChat or join the QQ group for tool updates and discussion:
 
-![Support](关注、赞赏码.png)
+<img src="./content/求关注-极思G-20261014.png" width="720" alt="Follow Jisig G: WeChat account and QQ group" />
+
+If these tools help with your work, you are welcome to support their development. Donations are entirely voluntary. Thank you for your support.
+
+<img src="./content/求赞赏-极思G-20261014.png" width="720" alt="Support Jisig G via WeChat or Afdian" />
 
 ## License
 

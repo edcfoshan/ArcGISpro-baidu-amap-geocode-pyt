@@ -25,9 +25,20 @@ An **ArcGIS Pro** Python toolbox (`.pyt`) integrating Baidu Maps and Amap (Gaode
 | **E_Reverse Geocoding_Point to POI** | Input point coordinates, output nearby POI list (long table format, one row per POI) |
 | **F_Coordinate Transform** | Batch conversion between WGS84 / GCJ02 / BD09 / CGCS2000 |
 
-## Sponsor
+## ❤️ Sponsor
 
-Thanks to **jizhanai.top** for sponsoring this project! [Register through the invitation link](https://jizhanai.top/register?ref=PBUXGDHTFUAS) and enter invitation code **`PBUXGDHTFUAS`** to receive **CNY 5 off**.
+<a href="https://jizhanai.top/register?ref=PBUXGDHTFUAS">
+  <img src="./content/sponsors/jizhan-banner-en.svg" width="100%" alt="Jizhan: invitation code PBUXGDHTFUAS for CNY 5 off. Click to register." />
+</a>
+
+<table>
+  <tr>
+    <td width="24%" align="center">
+      <a href="https://jizhanai.top/register?ref=PBUXGDHTFUAS"><img src="./content/sponsors/jizhan-wordmark.svg" width="180" alt="极栈 jizhanai.top，点击通过邀请链接注册" /></a>
+    </td>
+    <td>Thanks to <a href="https://jizhanai.top/register?ref=PBUXGDHTFUAS"><b>Jizhan · jizhanai.top</b></a> for sponsoring this project! Jizhan offers <b>ChatGPT activation codes</b>, with instructions for redeeming them on Magang.<br><br><a href="https://jizhanai.top/register?ref=PBUXGDHTFUAS">Register through the invitation link</a> and enter invitation code <code>PBUXGDHTFUAS</code> to receive <b>CNY 5 off</b>.</td>
+  </tr>
+</table>
 
 ## Installation
 

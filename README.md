@@ -25,9 +25,20 @@
 | **E_逆地理编码_坐标信息转最近点信息** | 输入点坐标，输出附近 POI 列表（长表格式，每 POI 一行） |
 | **F_坐标系转换** | WGS84 / GCJ02(国测局) / BD09(百度) / CGCS2000 之间的批量坐标转换 |
 
-## 赞助商
+## ❤️ 赞助商
 
-感谢 **jizhanai.top** 赞助支持！通过[邀请链接注册开通](https://jizhanai.top/register?ref=PBUXGDHTFUAS)，填写邀请码 **`PBUXGDHTFUAS`** 可减 **5 元**。
+<a href="https://jizhanai.top/register?ref=PBUXGDHTFUAS">
+  <img src="./content/sponsors/jizhan-banner.svg" width="100%" alt="极栈：填写邀请码 PBUXGDHTFUAS 减 5 元，点击注册开通" />
+</a>
+
+<table>
+  <tr>
+    <td width="24%" align="center">
+      <a href="https://jizhanai.top/register?ref=PBUXGDHTFUAS"><img src="./content/sponsors/jizhan-wordmark.svg" width="180" alt="极栈 jizhanai.top，点击通过邀请链接注册" /></a>
+    </td>
+    <td>感谢 <a href="https://jizhanai.top/register?ref=PBUXGDHTFUAS"><b>极栈 · jizhanai.top</b></a> 赞助支持本项目！极栈提供 <b>ChatGPT 激活码</b>，选购后按站内指引前往码港兑换。<br><br>通过<a href="https://jizhanai.top/register?ref=PBUXGDHTFUAS">邀请链接注册开通</a>，填写邀请码 <code>PBUXGDHTFUAS</code>，可减 <b>5 元</b>。</td>
+  </tr>
+</table>
 
 ## 安装
 
